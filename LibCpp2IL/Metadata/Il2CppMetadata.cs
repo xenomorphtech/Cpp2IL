@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using LibCpp2IL.BinaryStructures;
 using LibCpp2IL.Logging;
@@ -15,6 +16,7 @@ namespace LibCpp2IL.Metadata
         //Disable null check as this stuff is reflected.
 #pragma warning disable 8618
         public Il2CppGlobalMetadataHeader metadataHeader;
+        public Il2CppMashalEntry[] marshalTable;
         public Il2CppAssemblyDefinition[] AssemblyDefinitions;
         public Il2CppImageDefinition[] imageDefinitions;
         public Il2CppTypeDefinition[] typeDefs;
@@ -49,6 +51,8 @@ namespace LibCpp2IL.Metadata
         public Il2CppFieldRef[] fieldRefs;
         public Il2CppGenericParameter[] genericParameters;
         public int[] constraintIndices;
+
+        public readonly Dictionary<uint, Il2CppMashalEntry> marshalTableDict = new Dictionary<uint, Il2CppMashalEntry>();
 
         private readonly Dictionary<int, Il2CppFieldDefaultValue> _fieldDefaultValueLookup = new Dictionary<int, Il2CppFieldDefaultValue>();
         private readonly Dictionary<Il2CppFieldDefinition, Il2CppFieldDefaultValue> _fieldDefaultLookupNew = new Dictionary<Il2CppFieldDefinition, Il2CppFieldDefaultValue>();
@@ -123,6 +127,19 @@ namespace LibCpp2IL.Metadata
             }
 
             if (metadataHeader.version < 24) throw new Exception("ERROR: Invalid metadata version, we only support v24+, this metadata is using v" + metadataHeader.version);
+
+
+
+            marshalTable = ReadMetadataClassArray<Il2CppMashalEntry>(metadataHeader.fieldMarshaledSizesOffset, 
+                                    metadataHeader.fieldMarshaledSizesCount);
+            foreach (var item in marshalTable)
+            {
+                marshalTableDict.Add(item.field_index, item);
+            }
+            Console.WriteLine("marshal " + metadataHeader.fieldMarshaledSizesOffset.ToString() + " " + 
+                metadataHeader.fieldMarshaledSizesCount.ToString()
+
+                );
 
             LibLogger.Verbose("\tReading image definitions...");
             var start = DateTime.Now;

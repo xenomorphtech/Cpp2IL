@@ -23,4 +23,11 @@ namespace LibCpp2IL.Metadata
 
         public Il2CppTypeDefinition[]? Types => LibCpp2IlMain.TheMetadata == null ? null : LibCpp2IlMain.TheMetadata.typeDefs.Skip(firstTypeIndex).Take((int) typeCount).ToArray();
     }
+
+    public class Il2CppMashalEntry
+    {
+        public uint field_index;
+        public uint flags;
+        public uint count;
+    }
 }

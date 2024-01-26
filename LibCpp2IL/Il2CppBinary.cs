@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Transactions;
 using LibCpp2IL.BinaryStructures;
 using LibCpp2IL.Logging;
 using LibCpp2IL.Metadata;
@@ -12,17 +13,26 @@ using LibCpp2IL.Reflection;
 
 namespace LibCpp2IL
 {
+    public class InteropData {
+        public ulong p1;
+        public ulong p2;
+        public ulong serialize_read;
+        public ulong p4;
+        public ulong p5;
+        public ulong v1;
+        public ulong il2cpp_class_ptr;
+    }
     public abstract class Il2CppBinary : ClassReadingBinaryReader
     {
         public InstructionSet InstructionSet;
         
         protected readonly long maxMetadataUsages;
         private Il2CppMetadataRegistration metadataRegistration;
-        private Il2CppCodeRegistration codeRegistration;
+        public Il2CppCodeRegistration codeRegistration;
         protected ulong[] methodPointers;
         private ulong[] genericMethodPointers;
-        private ulong[] invokerPointers;
-        private ulong[]? customAttributeGenerators; //Pre-27 only
+        public ulong[] invokerPointers;
+        public ulong[]? customAttributeGenerators; //Pre-27 only
         protected long[] fieldOffsets;
         protected ulong[] metadataUsages; //Pre-27 only
         protected ulong[][] codeGenModuleMethodPointers; //24.2+
@@ -38,6 +48,7 @@ namespace LibCpp2IL
         public readonly Dictionary<Il2CppMethodDefinition, List<Il2CppGenericMethodRef>> ConcreteGenericMethods = new();
         public readonly Dictionary<ulong, List<Il2CppGenericMethodRef>> ConcreteGenericImplementationsByAddress = new();
         public ulong[] TypeDefinitionSizePointers;
+        public Dictionary<uint, InteropData> interops = new();
 
         protected Il2CppBinary(MemoryStream input, long maxMetadataUsages) : base(input)
         {
@@ -72,6 +83,18 @@ namespace LibCpp2IL
                 LibLogger.Verbose("\tReading custom attribute generators...");
                 start = DateTime.Now;
                 customAttributeGenerators = ReadClassArrayAtVirtualAddress<ulong>(codeRegistration.customAttributeGeneratorListAddress, (long) codeRegistration.customAttributeCount);
+                LibLogger.VerboseNewline($"OK ({(DateTime.Now - start).TotalMilliseconds} ms)");
+            }
+
+            if (LibCpp2IlMain.MetadataVersion >= 27)
+            {
+                LibLogger.Verbose("\tReading interops...");
+                start = DateTime.Now;
+                var t_interops = ReadClassArrayAtVirtualAddress<InteropData>(codeRegistration.interopData, (long)codeRegistration.interopDataCount);
+                foreach (var i in t_interops) {
+                    interops.Add(ReadClassArrayAtVirtualAddress<uint>(i.il2cpp_class_ptr, 1)[0], i);
+                }
+                
                 LibLogger.VerboseNewline($"OK ({(DateTime.Now - start).TotalMilliseconds} ms)");
             }
 
