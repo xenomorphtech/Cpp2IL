@@ -1,16 +1,18 @@
-﻿using System;
+﻿
+using System;
 using System.Reflection.Metadata;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using System.Xml;
 using LibCpp2IL;
 using LibCpp2IL.Metadata;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Newtonsoft.Json;
 using System.IO.Compression;
 using System.Linq;
 using System.Linq.Expressions;
+using Newtonsoft.Json.Linq;
+using System.Reflection;
 
 // See https://aka.ms/new-console-template for more information
 Console.WriteLine("Hello, World!");
@@ -46,33 +48,27 @@ var binary = File.ReadAllBytes("libil2cpp.so");
 
 LibCpp2IlMain.Initialize(binary, bytes, [29, 0, 0]);
 
-//related stuff
-//[Version(Min = 27.1f)] public int attributeDataOffset; //uint8_t
-//[Version(Min = 27.1f)] public int attributeDataCount;
-//[Version(Min = 27.1f)] public int attributeDataRangeOffset; //Il2CppCustomAttributeDataRange
-//[Version(Min = 27.1f)] public int attributeDataRangeCount;
-//Console.WriteLine("all custom attribute generators: " + LibCpp2IlMain.Binary.);
-
-
 var defs = new List<ExportDef>();
 foreach (var n in LibCpp2IlMain.TheMetadata.typeDefs) {
-    if (n.Name == "SP_CAMP_LAST_INFO")
-    {
-        Console.WriteLine("hello world");
-    }
-   var fields = n.Fields.Select(f => {
+    
+    var fieldIndex = 0;
+   var fields = n.Fields.Select(f =>
+   {
        var name = f.FieldType?.baseType?.Name;
        if (name == null) { name = f.FieldType?.arrayType?.baseType?.Name; };
-      
-       
+
+   
        var nf = new FieldDef
        {
-            index = f.FieldIndex,
-            name = f.Name,
-            fieldtype = name,
-            is_array = f.FieldType?.isArray
-            
+           index = f.FieldIndex,
+           name = f.Name,
+           fieldtype = name,
+           is_array = f.FieldType?.isArray,
+           offset = (uint)LibCpp2IlMain.Binary.GetFieldOffsetFromIndex(n.TypeIndex, fieldIndex, f.FieldIndex, true, false),
+           value = f.DefaultValue?.Value,
+
         };
+        fieldIndex += 1;
        
         if (LibCpp2IlMain.TheMetadata.marshalTableDict.ContainsKey((uint)f.FieldIndex)) {
                 var entry = LibCpp2IlMain.TheMetadata.marshalTableDict[(uint)f.FieldIndex];
@@ -94,7 +90,8 @@ foreach (var n in LibCpp2IlMain.TheMetadata.typeDefs) {
         marshall_info = 
           LibCpp2IlMain.Binary.interops.ContainsKey((uint)n.TypeIndex) ?
             LibCpp2IlMain.Binary.interops[(uint)n.TypeIndex] : null,
-        fields = fields 
+        fields = fields, 
+        flags = n.flags
     };
 
     
@@ -113,6 +110,7 @@ File.WriteAllText("types.json", JsonConvert.SerializeObject(defs, new JsonSerial
     public int native_size;
     public string? name;
     public int size;
+    public uint flags;
     public InteropData? marshall_info;
     public List<FieldDef> fields;
 }
@@ -122,7 +120,9 @@ public class FieldDef
     public string? basetype;
     public string? fieldtype;
     public int index;
+    public uint offset;
     public uint? marhshal_count;
     public uint? marshal_flags;
     public bool? is_array;
+    public object? value;
 }

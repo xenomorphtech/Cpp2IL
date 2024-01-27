@@ -63,6 +63,8 @@ namespace LibCpp2IL
             codeRegistration = ReadClassAtVirtualAddress<Il2CppCodeRegistration>(pCodeRegistration);
             metadataRegistration = ReadClassAtVirtualAddress<Il2CppMetadataRegistration>(pMetadataRegistration);
 
+            //pMetadataRegistration.fieldOffsets, pMetadataRegistration.fieldOffsetsCount
+
             LibLogger.Verbose("\tReading generic instances...");
             var start = DateTime.Now;
             genericInsts = Array.ConvertAll(ReadClassArrayAtVirtualAddress<ulong>(metadataRegistration.genericInsts, metadataRegistration.genericInstsCount), ReadClassAtVirtualAddress<Il2CppGenericInst>);
