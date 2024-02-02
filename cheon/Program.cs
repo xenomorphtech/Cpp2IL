@@ -57,23 +57,24 @@ foreach (var n in LibCpp2IlMain.TheMetadata.typeDefs) {
        var name = f.FieldType?.baseType?.Name;
        if (name == null) { name = f.FieldType?.arrayType?.baseType?.Name; };
 
-   
+        
        var nf = new FieldDef
        {
+           is_static = (f.RawFieldType.attrs & 0x10) != 0,  
            index = f.FieldIndex,
            name = f.Name,
            fieldtype = name,
            is_array = f.FieldType?.isArray,
            offset = (uint)LibCpp2IlMain.Binary.GetFieldOffsetFromIndex(n.TypeIndex, fieldIndex, f.FieldIndex, true, false),
            value = f.DefaultValue?.Value,
-
+           
         };
         fieldIndex += 1;
        
         if (LibCpp2IlMain.TheMetadata.marshalTableDict.ContainsKey((uint)f.FieldIndex)) {
                 var entry = LibCpp2IlMain.TheMetadata.marshalTableDict[(uint)f.FieldIndex];
             nf.marshal_flags = entry.flags;
-               nf.marhshal_count = entry.count;
+               nf.marshal_count = entry.count;
                }
 
         return nf;
@@ -121,8 +122,9 @@ public class FieldDef
     public string? fieldtype;
     public int index;
     public uint offset;
-    public uint? marhshal_count;
+    public uint? marshal_count;
     public uint? marshal_flags;
     public bool? is_array;
+    public bool? is_static;
     public object? value;
 }
